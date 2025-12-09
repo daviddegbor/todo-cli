@@ -4,7 +4,7 @@
 A tiny, dependency-free command-line checklist app written in Python. It stores your items in a JSON file and supports listing, adding, removing, and moving items using intuitive **1-based indexing**. This README also documents **planned/feature** commands you asked to highlight: `prio`, `update`, and `swap`.
 
 > **Author**: David Degbor  
-> **Role**: Software Test Engineer Intern
+> **Role**: Engineer
 
 ---
 
@@ -224,6 +224,14 @@ Key functions:
 
 ---
 
+## Testing & CI
+This project includes a pytest suite under `tests/`. Run locally with:
+```bash
+python -m pip install pytest
+pytest
+```
+---
+
 ## Extending the App (prio, update, swap)
 Below are suggested approaches to add the three featured commands.
 
@@ -405,4 +413,4 @@ Examples:
 ---
 
 ### Acknowledgements
-Thanks for sharing the project structure, David! This README aims to be future-proof for the `update`, `swap`, and `prio` commands you want to feature.
+This README aims to be future-proof for the `update`, `swap`, and `prio` commands for the future.
