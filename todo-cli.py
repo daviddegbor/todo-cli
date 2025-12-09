@@ -126,6 +126,11 @@ def parse_args(argv):
             print("Error: 'prio' requires item and priority level.", file=sys.stderr)
             sys.exit(2)
         return("prio", [cleaned[1], cleaned[2]], file_path)
+    elif cmd == "edit":
+        if len(cleaned) != 3:
+            print("Error: 'edit' requires item idx followed by its new name", file=sys.stderr)
+            sys.exit(2)
+        return("edit", [cleaned[1], cleaned[2]], file_path)
     elif cmd in ("-h", "--help", "help"):
         print(__doc__)
         sys.exit(0)
@@ -210,7 +215,22 @@ def main():
         # Optionally print with an indicator
         print_items(items)
         return
+    elif cmd == "edit":
+        if len(items) == 0:
+            print("Checklist is empty; nothing to edit.")
+            return
+        idx = ensure_1_based_index(args[0], len(items), label="item_idx")
+        new_name = " ".join(args[1:]).strip()
+        if not new_name:
+            print("Error: new_name cannot be empty.", file=sys.stderr)
+            sys.exit(2)
 
+        items[idx - 1]["name"] = new_name
+
+        save_items(file_path, items)
+        print(f"edited: #{idx} -> '{new_name}'")
+        print_items(items)
+        return
 
 if __name__ == "__main__":
     main()
