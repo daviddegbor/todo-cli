@@ -2,16 +2,18 @@
 Simple command-line checklist app.
 
 Usage:
-  checklist.py                 # Show checklist
-  checklist.py add <item>      # Add a new item
-  checklist.py rm <item_idx>   # Remove item at 1-based index
-  checklist.py mv <src_idx> <dst_idx>  # Move item from src to dst (1-based)
-  checklist.py --file <path>   # Optional: use a custom storage file
+  todo-cli.py                            # Show checklist
+  todo-cli.py add <item>                 # Add a new item
+  todo-cli.py rm <item_idx>              # Remove item at 1-based index
+  todo-cli.py mv <src_idx> <dst_idx>     # Move item from src to dst (1-based)
+  todo-cli.py prio <item_idx> <priority> # Set item priority (low|med|high or 1..3)
+  todo-cli.py --file <path>              # Optional: use a custom storage file
 
 Examples:
-  checklist.py add "Buy milk"
-  checklist.py rm 2
-  checklist.py mv 3 1
+  todo-cli.py add "Buy milk"
+  todo-cli.py rm 2
+  todo-cli.py mv 3 1
+  todo-cli.py prio 1 high
 """
 
 import sys
@@ -67,7 +69,8 @@ def print_items(items):
         print("Checklist is empty.")
         return
     for i, item in enumerate(items, start=1):
-        print(f"{i}. {item}")
+        mark = {"none": "x","low": "-", "med": "*", "high": "!"}[item["priority"]]
+        print(f"{i}. [{mark}] {item['name']}")
 
 def parse_args(argv):
     """
@@ -128,7 +131,7 @@ def parse_args(argv):
         sys.exit(0)
     else:
         print(f"Error: unknown command '{cmd}'.", file=sys.stderr)
-        print("Use 'add', 'rm', 'mv', or run without args to list. For help: checklist.py --help")
+        print("Use 'add', 'rm', 'mv', or run without args to list. For help: todo-cli.py --help")
         sys.exit(2)
 
 def ensure_1_based_index(idx_str, items_len, label="index"):
@@ -156,9 +159,10 @@ def main():
         if not item:
             print("Error: item cannot be empty.", file=sys.stderr)
             sys.exit(2)
-        items.append(item)
+        obj = {"name": item, "priority": "none"}
+        items.append(obj)
         save_items(file_path, items)
-        print(f"Added: '{item}'")
+        print(f"Added: '{obj["name"]}'")
         print_items(items)
         return
 
@@ -169,7 +173,7 @@ def main():
         idx = ensure_1_based_index(args[0], len(items), label="item_idx")
         removed = items.pop(idx - 1)
         save_items(file_path, items)
-        print(f"Removed: '{removed}' (was #{idx})")
+        print(f"Removed: '{removed["name"]}' (was #{idx})")
         print_items(items)
         return
 
@@ -187,9 +191,10 @@ def main():
             dst = len(items) + 1
         items.insert(dst - 1, item)
         save_items(file_path, items)
-        print(f"Moved: '{item}' from #{src} to #{dst}")
+        print(f"Moved: '{item["name"]}' from #{src} to #{dst}")
         print_items(items)
         return
+    
     elif cmd == "prio":
         if len(items) == 0:
             print("Checklist is empty; nothing to prioritize.")
@@ -203,10 +208,8 @@ def main():
         save_items(file_path, items)
         print(f"Priority set: #{idx} -> {level}")
         # Optionally print with an indicator
-        for i, it in enumerate(items, start=1):
-            mark = {"none": "x","low": "-", "med": "*", "high": "!"}[it["priority"]]
-            print(f"{i}. [{mark}] {it['name']}")
-    return
+        print_items(items)
+        return
 
 
 if __name__ == "__main__":
