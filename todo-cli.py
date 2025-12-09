@@ -2,16 +2,18 @@
 Simple command-line checklist app.
 
 Usage:
-  checklist.py                 # Show checklist
-  checklist.py add <item>      # Add a new item
-  checklist.py rm <item_idx>   # Remove item at 1-based index
-  checklist.py mv <src_idx> <dst_idx>  # Move item from src to dst (1-based)
-  checklist.py --file <path>   # Optional: use a custom storage file
+  todo-cli.py                            # Show checklist
+  todo-cli.py add <item>                 # Add a new item
+  todo-cli.py rm <item_idx>              # Remove item at 1-based index
+  todo-cli.py mv <src_idx> <dst_idx>     # Move item from src to dst (1-based)
+  todo-cli.py prio <item_idx> <priority> # Set item priority (low|med|high or 1..3)
+  todo-cli.py --file <path>              # Optional: use a custom storage file
 
 Examples:
-  checklist.py add "Buy milk"
-  checklist.py rm 2
-  checklist.py mv 3 1
+  todo-cli.py add "Buy milk"
+  todo-cli.py rm 2
+  todo-cli.py mv 3 1
+  todo-cli.py prio 1 high
 """
 
 import sys
@@ -21,7 +23,7 @@ from pathlib import Path
 
 DEFAULT_FILE = Path.home() / ".checklist.json"
 
-def load_items(file_path: Path):
+def _load_items(file_path: Path):
     if not file_path.exists():
         return []
     try:
@@ -33,6 +35,25 @@ def load_items(file_path: Path):
         return []
     except (json.JSONDecodeError, OSError):
         # Corrupt or unreadable file — start fresh
+        return []
+    
+def load_items(file_path: Path):
+    if not file_path.exists():
+        return []
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            # v2 objects
+            if data and isinstance(data[0], dict):
+                return [
+                    {"name": str(x.get("name", "")), "priority": x.get("priority", "none")}
+                    for x in data
+                ]
+            # v1 strings -> upgrade
+            return [{"name": str(x), "priority": "none"} for x in data]
+        return []
+    except (json.JSONDecodeError, OSError):
         return []
 
 def save_items(file_path: Path, items):
@@ -48,7 +69,8 @@ def print_items(items):
         print("Checklist is empty.")
         return
     for i, item in enumerate(items, start=1):
-        print(f"{i}. {item}")
+        mark = {"none": "x","low": "-", "med": "*", "high": "!"}[item["priority"]]
+        print(f"{i}. [{mark}] {item['name']}")
 
 def parse_args(argv):
     """
@@ -99,12 +121,17 @@ def parse_args(argv):
             print("Error: 'mv' requires src_idx and dst_idx.", file=sys.stderr)
             sys.exit(2)
         return ("mv", [cleaned[1], cleaned[2]], file_path)
+    elif cmd == "prio":
+        if len(cleaned) != 3:
+            print("Error: 'prio' requires item and priority level.", file=sys.stderr)
+            sys.exit(2)
+        return("prio", [cleaned[1], cleaned[2]], file_path)
     elif cmd in ("-h", "--help", "help"):
         print(__doc__)
         sys.exit(0)
     else:
         print(f"Error: unknown command '{cmd}'.", file=sys.stderr)
-        print("Use 'add', 'rm', 'mv', or run without args to list. For help: checklist.py --help")
+        print("Use 'add', 'rm', 'mv', or run without args to list. For help: todo-cli.py --help")
         sys.exit(2)
 
 def ensure_1_based_index(idx_str, items_len, label="index"):
@@ -121,6 +148,7 @@ def ensure_1_based_index(idx_str, items_len, label="index"):
 def main():
     cmd, args, file_path = parse_args(sys.argv[1:])
     items = load_items(file_path)
+    VALID_PRIOS = {"none","low", "med", "high"}
 
     if cmd == "list":
         print_items(items)
@@ -131,9 +159,10 @@ def main():
         if not item:
             print("Error: item cannot be empty.", file=sys.stderr)
             sys.exit(2)
-        items.append(item)
+        obj = {"name": item, "priority": "none"}
+        items.append(obj)
         save_items(file_path, items)
-        print(f"Added: '{item}'")
+        print(f"Added: '{obj["name"]}'")
         print_items(items)
         return
 
@@ -144,7 +173,7 @@ def main():
         idx = ensure_1_based_index(args[0], len(items), label="item_idx")
         removed = items.pop(idx - 1)
         save_items(file_path, items)
-        print(f"Removed: '{removed}' (was #{idx})")
+        print(f"Removed: '{removed["name"]}' (was #{idx})")
         print_items(items)
         return
 
@@ -162,9 +191,26 @@ def main():
             dst = len(items) + 1
         items.insert(dst - 1, item)
         save_items(file_path, items)
-        print(f"Moved: '{item}' from #{src} to #{dst}")
+        print(f"Moved: '{item["name"]}' from #{src} to #{dst}")
         print_items(items)
         return
+    
+    elif cmd == "prio":
+        if len(items) == 0:
+            print("Checklist is empty; nothing to prioritize.")
+            return
+        idx = ensure_1_based_index(args[0], len(items), label="item_idx")
+        level = args[1].lower()
+        if level not in VALID_PRIOS:
+            print("Error: priority must be one of none|low|med|high.", file=sys.stderr)
+            sys.exit(2)
+        items[idx - 1]["priority"] = level
+        save_items(file_path, items)
+        print(f"Priority set: #{idx} -> {level}")
+        # Optionally print with an indicator
+        print_items(items)
+        return
+
 
 if __name__ == "__main__":
     main()
