@@ -21,7 +21,7 @@ from pathlib import Path
 
 DEFAULT_FILE = Path.home() / ".checklist.json"
 
-def load_items(file_path: Path):
+def _load_items(file_path: Path):
     if not file_path.exists():
         return []
     try:
@@ -33,6 +33,25 @@ def load_items(file_path: Path):
         return []
     except (json.JSONDecodeError, OSError):
         # Corrupt or unreadable file — start fresh
+        return []
+    
+def load_items(file_path: Path):
+    if not file_path.exists():
+        return []
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            # v2 objects
+            if data and isinstance(data[0], dict):
+                return [
+                    {"name": str(x.get("name", "")), "priority": x.get("priority", "none")}
+                    for x in data
+                ]
+            # v1 strings -> upgrade
+            return [{"name": str(x), "priority": "none"} for x in data]
+        return []
+    except (json.JSONDecodeError, OSError):
         return []
 
 def save_items(file_path: Path, items):
@@ -99,6 +118,11 @@ def parse_args(argv):
             print("Error: 'mv' requires src_idx and dst_idx.", file=sys.stderr)
             sys.exit(2)
         return ("mv", [cleaned[1], cleaned[2]], file_path)
+    elif cmd == "prio":
+        if len(cleaned) != 3:
+            print("Error: 'prio' requires item and priority level.", file=sys.stderr)
+            sys.exit(2)
+        return("prio", [cleaned[1], cleaned[2]], file_path)
     elif cmd in ("-h", "--help", "help"):
         print(__doc__)
         sys.exit(0)
@@ -121,6 +145,7 @@ def ensure_1_based_index(idx_str, items_len, label="index"):
 def main():
     cmd, args, file_path = parse_args(sys.argv[1:])
     items = load_items(file_path)
+    VALID_PRIOS = {"none","low", "med", "high"}
 
     if cmd == "list":
         print_items(items)
@@ -165,6 +190,24 @@ def main():
         print(f"Moved: '{item}' from #{src} to #{dst}")
         print_items(items)
         return
+    elif cmd == "prio":
+        if len(items) == 0:
+            print("Checklist is empty; nothing to prioritize.")
+            return
+        idx = ensure_1_based_index(args[0], len(items), label="item_idx")
+        level = args[1].lower()
+        if level not in VALID_PRIOS:
+            print("Error: priority must be one of none|low|med|high.", file=sys.stderr)
+            sys.exit(2)
+        items[idx - 1]["priority"] = level
+        save_items(file_path, items)
+        print(f"Priority set: #{idx} -> {level}")
+        # Optionally print with an indicator
+        for i, it in enumerate(items, start=1):
+            mark = {"none": "x","low": "-", "med": "*", "high": "!"}[it["priority"]]
+            print(f"{i}. [{mark}] {it['name']}")
+    return
+
 
 if __name__ == "__main__":
     main()
