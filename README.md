@@ -1,7 +1,7 @@
 
 # Checklist — A Simple Python CLI To‑Do List
 
-A tiny, dependency-free command-line checklist app written in Python. It stores your items in a JSON file and supports listing, adding, removing, and moving items using intuitive **1-based indexing**. This README also documents **planned/feature** commands you asked to highlight: `prio`, `update`, and `swap`.
+A tiny, dependency-free command-line checklist app written in Python. It stores your items in a JSON file and supports listing, adding, removing, and moving items using intuitive **1-based indexing**. This README also documents **planned/feature** commands: `update` and `swap`.
 
 > **Author**: David Degbor  
 > **Role**: Engineer
@@ -24,8 +24,6 @@ A tiny, dependency-free command-line checklist app written in Python. It stores 
 - [Extending the App (prio, update, swap)](#extending-the-app-prio-update-swap)
   - [Implementing `update` (rename item)](#implementing-update-rename-item)
   - [Implementing `swap` (exchange positions)](#implementing-swap-exchange-positions)
-  - [Implementing `prio` (set item priority)](#implementing-prio-set-item-priority)
-  - [Migrating storage for priorities](#migrating-storage-for-priorities)
 - [Cross‑Platform Notes](#crossplatform-notes)
 - [FAQ](#faq)
 - [Contributing](#contributing)

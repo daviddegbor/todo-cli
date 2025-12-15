@@ -20,6 +20,7 @@ import sys
 import json
 import os
 from pathlib import Path
+import dateparser
 
 DEFAULT_FILE = Path.home() / ".checklist.json"
 
